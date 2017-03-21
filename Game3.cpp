@@ -8,25 +8,25 @@
 
 using namespace std;
 
-const int SCW = 1520;
-const int SCH = 800;
+const int SW = 640;
+const int SH = 480;
 
-int LW = 10000;
-int LH = 10000;
+const int LW = 10000;
+const int LH = 10000;
 
-int TW = 20;
-int TH = 20;
-int TOTAL_TILES = (LW/TW) * (LH/TH);
+const int TW = 20;
+const int TH = 20;
+const int TOTAL_TILES = (LW/TW) * (LH/TH);
 const int TOTAL_TILE_SPRITES = 8;
 
-int TILE_SPACE = 0;
-int TILE_IRR_SPACE = 1;
-int TILE_METAL_FLOOR = 2;
-int TILE_IRR_METAL_FLOOR = 3;
-int TILE_ASTEROID = 4;
-int TILE_IRR_ASTEROID = 5;
-int TILE_WALL = 6;
-int TILE_IRR_WALL = 7;
+const int TILE_SPACE = 0;
+const int TILE_IRR_SPACE = 1;
+const int TILE_METAL_FLOOR = 2;
+const int TILE_IRR_METAL_FLOOR = 3;
+const int TILE_ASTEROID = 4;
+const int TILE_IRR_ASTEROID = 5;
+const int TILE_WALL = 6;
+const int TILE_IRR_WALL = 7;
 SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
 SDL_Rect gTileClips[TOTAL_TILE_SPRITES];
@@ -142,7 +142,6 @@ class LTexture
 
 LTexture gTileTexture;
 LTexture gDotTexture;
-LTexture StartTexture;
 bool checkCollision(SDL_Rect a, SDL_Rect b)
 {
     int leftA, leftB;
@@ -168,7 +167,6 @@ bool checkCollision(SDL_Rect a, SDL_Rect b)
 
     if( rightA <= leftB )
 		return false;
-
 
     if( leftA >= rightB )
 		return false;
@@ -208,10 +206,87 @@ class Tile{
 	SDL_Rect getBox(){
 		return mBox;
 	}
-	
 };
+	bool setTiles(Tile *tiles[]){
+		bool tilesLoaded = true;
+		int x = 0; int y = 0;
+		
+		ifstream map("tiles.map");
+			for(int i =0; i < TOTAL_TILES; ++i)
+			{
+				int tileType = -1;
+				map >> tileType;
+				if(map.fail()){
+					cout << "Error Loading map" << endl;
+					tilesLoaded = false;
+					break;
+				}
+				if((tileType >= 0) && (tileType < TOTAL_TILE_SPRITES))
+					tiles[i] = new Tile(x,y,tileType); 
+				else{
+					cout << "Error Loading map" << endl;
+					tilesLoaded = false;
+					break;
+				}
+				x+= TW;
+				if(x>= LW){
+					x = 0;
+					y+=TH;				
+				}
+			}
+			if(tilesLoaded)
+			{
+				gTileClips[ TILE_SPACE ].x = 0;
+				gTileClips[ TILE_SPACE ].y = 0;
+				gTileClips[ TILE_SPACE ].w = TW;
+				gTileClips[ TILE_SPACE].h = TH;
+				
+				gTileClips[ TILE_IRR_SPACE].x = 20;
+				gTileClips[ TILE_IRR_SPACE].y = 0;
+				gTileClips[ TILE_IRR_SPACE].w = TW;
+				gTileClips[ TILE_IRR_SPACE].h = TH;
+				
+				gTileClips[ TILE_METAL_FLOOR].x = 40;
+				gTileClips[ TILE_METAL_FLOOR].y = 0;
+				gTileClips[ TILE_METAL_FLOOR].w = TW;
+				gTileClips[ TILE_METAL_FLOOR].h = TH;
+				
+				gTileClips[ TILE_IRR_METAL_FLOOR ].x = 60;
+				gTileClips[ TILE_IRR_METAL_FLOOR ].y = 0;
+				gTileClips[ TILE_IRR_METAL_FLOOR ].w = TW;
+				gTileClips[ TILE_IRR_METAL_FLOOR].h = TH;
+				
+				gTileClips[ TILE_ASTEROID ].x = 80;
+				gTileClips[ TILE_ASTEROID ].y = 0;
+				gTileClips[ TILE_ASTEROID ].w = TW;
+				gTileClips[ TILE_ASTEROID].h = TH;
+				
+				gTileClips[ TILE_IRR_ASTEROID ].x = 100;
+				gTileClips[ TILE_IRR_ASTEROID ].y = 0;
+				gTileClips[ TILE_IRR_ASTEROID ].w = TW;
+				gTileClips[ TILE_IRR_ASTEROID].h = TH;
+				
+				gTileClips[ TILE_WALL ].x = 120;
+				gTileClips[ TILE_WALL ].y = 0;
+				gTileClips[ TILE_WALL ].w = TW;
+				gTileClips[ TILE_WALL].h = TH;
+				
+				gTileClips[ TILE_IRR_WALL ].x = 140;
+				gTileClips[ TILE_IRR_WALL ].y = 0;
+				gTileClips[ TILE_IRR_WALL ].w = TW;
+				gTileClips[ TILE_IRR_WALL].h = TH;
+				}
+			
+		map.close();
+		
+		return tilesLoaded;
+		
+		
+	}
 
+	
 bool touchesWall(SDL_Rect box, Tile* tiles[]){
+	 //Go through the tiles
     for( int i = 0; i < TOTAL_TILES; ++i )
     {
 		if( ( tiles[ i ]->getType() >= TILE_ASTEROID ) && ( tiles[ i ]->getType() <= TILE_WALL ) )
@@ -221,94 +296,12 @@ bool touchesWall(SDL_Rect box, Tile* tiles[]){
 
  return false;
 }
-bool setTiles(Tile *tiles[]){
-	bool tilesLoaded = true;
-	int x = 0; int y = 0;
-	
-	ifstream map("tiles.map");
-	
-	if(map == NULL){
-		cout << " Unable to load map file " << endl;
-		tilesLoaded = false;
-	}
-	else{
-		for(int i =0; i < TOTAL_TILES; ++i)
-		{
-			int tileType = -1;
-			map >> tileType;
-			if(map.fail()){
-				cout << "Error Loading map" << endl;
-				tilesLoaded = false;
-				break;
-			}
-			if((tileType >= 0) && (tileType < TOTAL_TILE_SPRITES))
-				tiles[i] = new Tile(x,y,tileType); 
-			else{
-				cout << "Error Loading map" << endl;
-				tilesLoaded = false;
-				break;
-			}
-			x+= TW;
-			if(x>= LW){
-				x = 0;
-				y+=TH;				
-			}
-		}
-		if(tilesLoaded)
-		{
-			gTileClips[ TILE_SPACE ].x = 0;
-			gTileClips[ TILE_SPACE ].y = 0;
-			gTileClips[ TILE_SPACE ].w = TW;
-			gTileClips[ TILE_SPACE].h = TH;
-			
-			gTileClips[ TILE_IRR_SPACE].x = 20;
-			gTileClips[ TILE_IRR_SPACE].y = 0;
-			gTileClips[ TILE_IRR_SPACE].w = TW;
-			gTileClips[ TILE_IRR_SPACE].h = TH;
-			
-			gTileClips[ TILE_METAL_FLOOR].x = 40;
-			gTileClips[ TILE_METAL_FLOOR].y = 0;
-			gTileClips[ TILE_METAL_FLOOR].w = TW;
-			gTileClips[ TILE_METAL_FLOOR].h = TH;
-			
-			gTileClips[ TILE_IRR_METAL_FLOOR ].x = 60;
-			gTileClips[ TILE_IRR_METAL_FLOOR ].y = 0;
-			gTileClips[ TILE_IRR_METAL_FLOOR ].w = TW;
-			gTileClips[ TILE_IRR_METAL_FLOOR].h = TH;
-			
-			gTileClips[ TILE_ASTEROID ].x = 80;
-			gTileClips[ TILE_ASTEROID ].y = 0;
-			gTileClips[ TILE_ASTEROID ].w = TW;
-			gTileClips[ TILE_ASTEROID].h = TH;
-			
-			gTileClips[ TILE_IRR_ASTEROID ].x = 100;
-			gTileClips[ TILE_IRR_ASTEROID ].y = 0;
-			gTileClips[ TILE_IRR_ASTEROID ].w = TW;
-			gTileClips[ TILE_IRR_ASTEROID].h = TH;
-			
-			gTileClips[ TILE_WALL ].x = 120;
-			gTileClips[ TILE_WALL ].y = 0;
-			gTileClips[ TILE_WALL ].w = TW;
-			gTileClips[ TILE_WALL].h = TH;
-			
-			gTileClips[ TILE_IRR_WALL ].x = 140;
-			gTileClips[ TILE_IRR_WALL ].y = 0;
-			gTileClips[ TILE_IRR_WALL ].w = TW;
-			gTileClips[ TILE_IRR_WALL].h = TH;
-			}
-		
-	}
-	map.close();
-	
-	return tilesLoaded;
-	
-	
-}
+
 class Characters{
 	static const int DOT_WIDTH = 15;
 	static const int DOT_HEIGHT = 15;
 	
-	static const int DOT_VEL = 20;
+	static const int DOT_VEL = 1;
 	public:
 	Characters(){
 		mBox.x = 0;
@@ -350,8 +343,8 @@ class Characters{
 	}
 }
 	void setCamera(SDL_Rect& camera){
-	camera.x = ( mBox.x + DOT_WIDTH / 2 ) - SCW / 2;
-	camera.y = ( mBox.y + DOT_HEIGHT / 2 ) - SCH / 2;
+	camera.x = ( mBox.x + DOT_WIDTH / 2 ) - SW / 2;
+	camera.y = ( mBox.y + DOT_HEIGHT / 2 ) - SH / 2;
 	if( camera.x < 0 ){ 
 		camera.x = 0;
 	}
@@ -367,49 +360,14 @@ class Characters{
 }
 	void render(SDL_Rect& camera){
 		gDotTexture.render( mBox.x - camera.x, mBox.y - camera.y );
-		StartTexture.render(camera.x, camera.y);
 	}
 	
 	private:
 	SDL_Rect mBox;
 	int mVelX, mVelY;
 };
-void init(){
-	if(SDL_Init(SDL_INIT_VIDEO) < 0) cout << "SDL_Initialization error: " << SDL_GetError() << endl;
-	else
-	{
-	if( !SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1" ) )
-		{
-			cout <<  "Warning: Linear texture filtering not enabled!" << endl;
-		}
-	
-	
-	
-	gWindow = SDL_CreateWindow( "Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCW, SCH, SDL_WINDOW_SHOWN );
-	if( gWindow == NULL )
-		{
-			cout << "Window could not be created! SDL Error: " << SDL_GetError() <<endl;
-		}
-	else
-		{
-			gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED );
-			if( gRenderer == NULL )
-			{
-				cout <<  "Renderer could not be created! SDL Error: " << SDL_GetError() << endl;
-			}
-			else
-			{
-				SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
-				int imgFlags = IMG_INIT_PNG;
-				if( !( IMG_Init( imgFlags ) & imgFlags ) )
-				{
-					cout << "SDL_image could not initialize! SDL_image Error: " << IMG_GetError()<<endl;
-				}
-			}
-		}
-	}
-}
-void loadMedia(Tile* tiles[]){	
+
+void loadMedia(Tile* tiles[]){
 	if(!gDotTexture.LoadFromFile("dot.bmp")){
 		cout << "Failed to load dot texture! " << endl;
 	}
@@ -418,64 +376,138 @@ void loadMedia(Tile* tiles[]){
 	}
 	if(!setTiles(tiles)){
 		cout << "Failed to load tile set!\n" << endl;
-	}	
-}
-void close(Tile* tiles[]){
-	for( int i = 0; i < TOTAL_TILES; ++i )
-	{
-		 if( tiles[ i ] == NULL )
-		 {
-			delete tiles[ i ];
-			tiles[ i ] = NULL;
-		 }
 	}
-	gDotTexture.free();
-	gTileTexture.free();
-	
-	SDL_DestroyRenderer( gRenderer );
-	SDL_DestroyWindow( gWindow );
-	gWindow = NULL;
-	gRenderer = NULL;
-
-	IMG_Quit();
-	SDL_Quit();
 }
-void gamestart()
-{
-	Tile* tileSet[TOTAL_TILES];
-	init();
-	loadMedia(tileSet);
-	bool quit = false;
-	SDL_Event e;
-	Characters CH1;
-	SDL_Rect camera = {0,0,SCW,SCH};
+
+class Game {
+	protected:
 	
-	while (!quit){
-		while(SDL_PollEvent(&e) !=0){
-			if(e.type == SDL_QUIT)
-				quit = true;
-				if(e.type == SDL_KEYDOWN)
-					StartTexture.free();
-			CH1.handleEvent(e);
+	public:
+	virtual void init(const char *gameName){
+		if(SDL_Init(SDL_INIT_VIDEO) < 0) cout << "SDL_Initialization error: " << SDL_GetError() << endl;
+		else
+		{
+		if( !SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1" ) )
+			{
+				cout <<  "Warning: Linear texture filtering not enabled!" << endl;
+			}
+		
+		
+		
+		gWindow = SDL_CreateWindow( gameName, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_SHOWN );
+		if( gWindow == NULL )
+			{
+				cout << "Window could not be created! SDL Error: " << SDL_GetError() <<endl;
+			}
+		else
+			{
+				gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED );
+				if( gRenderer == NULL )
+				{
+					cout <<  "Renderer could not be created! SDL Error: " << SDL_GetError() << endl;
+				}
+				else
+				{
+					SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
+					int imgFlags = IMG_INIT_PNG;
+					if( !( IMG_Init( imgFlags ) & imgFlags ) )
+					{
+						cout << "SDL_image could not initialize! SDL_image Error: " << IMG_GetError()<<endl;
+					}
+				}
+			}
 		}
+	}
+
+	virtual void close(Tile* tiles[]){
+		for( int i = 0; i < TOTAL_TILES; ++i )
+		{
+ 			 if( tiles[ i ] == NULL )
+			 {
+				delete tiles[ i ];
+				tiles[ i ] = NULL;
+			 }
+		}
+		gDotTexture.free();
+		gTileTexture.free();
+		
+		SDL_DestroyRenderer( gRenderer );
+		SDL_DestroyWindow( gWindow );
+		gWindow = NULL;
+		gRenderer = NULL;
+
+		IMG_Quit();
+		SDL_Quit();
+	}
+
+	void run(){
+		
+		bool quit = false;
+		
+		
+		while (!quit){
+			SDL_Event e;
+			while(SDL_PollEvent(&e) !=0){
+				
+				if(e.type == SDL_QUIT)
+					quit = true;
+				if(!quit)
+					handleEvent(e);
+			}
+			
+			
+			
+			SDL_RenderClear(gRenderer);
+			
+			show();
+			
+		
+			SDL_RenderPresent(gRenderer);
+		}
+	}
+	
+	virtual void show() = 0;
+	virtual void handleEvent(SDL_Event &e) = 0;
+};
+
+class ourGame: public Game{
+	Characters CH1;
+	Tile* tileSet[TOTAL_TILES];
+	SDL_Rect camera = {0,0,SW,SH};
+	
+	public:
+	void init(const char *gameName = "SDL Tutorial"){
+		Game::init(gameName);
+		loadMedia(tileSet);
+		
+		
+	}
+	
+	void show(){
 		CH1.move(tileSet);
 		CH1.setCamera(camera);
-		
-		SDL_SetRenderDrawColor(gRenderer,0xFF,0xFF,0xFF,0xFF);
-		SDL_RenderClear(gRenderer);
-		
 		for (int i = 0; i < TOTAL_TILES; ++i)
 		{
 			tileSet[i]->render(camera);
 		}
 		
 		CH1.render(camera);
-		SDL_RenderPresent(gRenderer);
+		SDL_SetRenderDrawColor(gRenderer,0xFF,0xFF,0xFF,0xFF);
 	}
-	close(tileSet);
-}
+	
+	void handleEvent(SDL_Event &e){
+		CH1.handleEvent(e);
+	}
+	
+	void close(){
+		Game::close(tileSet);
+	}
+};
 
 int main( int argc, char *argv[] ){
-	gamestart();
+	ourGame g;
+	g.init();
+	g.run();
+	g.close();
 	return 0;
 }
