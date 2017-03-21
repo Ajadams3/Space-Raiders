@@ -10,7 +10,7 @@ using namespace std;
 
 const int SW = 640;
 const int SH = 480;
-
+// change these two to make it move a little faster.
 const int LW = 10000;
 const int LH = 10000;
 
