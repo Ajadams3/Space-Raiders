@@ -5,28 +5,29 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <cmath>
 
 using namespace std;
 
-const int SW = 640;
-const int SH = 480;
-// change these two to make it move a little faster.
-const int LW = 10000;
-const int LH = 10000;
+const int SW = 1000;
+const int SH = 800;
+
+const int LW = 4000;
+const int LH = 4000;
 
 const int TW = 20;
 const int TH = 20;
 const int TOTAL_TILES = (LW/TW) * (LH/TH);
 const int TOTAL_TILE_SPRITES = 8;
 
-const int TILE_SPACE = 0;
-const int TILE_IRR_SPACE = 1;
-const int TILE_METAL_FLOOR = 2;
-const int TILE_IRR_METAL_FLOOR = 3;
-const int TILE_ASTEROID = 4;
-const int TILE_IRR_ASTEROID = 5;
-const int TILE_WALL = 6;
-const int TILE_IRR_WALL = 7;
+int TILE_SPACE = 0;
+int TILE_IRR_SPACE = 1;
+int TILE_METAL_FLOOR = 2;
+int TILE_IRR_METAL_FLOOR = 3;
+int TILE_ASTEROID = 4;
+int TILE_IRR_ASTEROID = 5;
+int TILE_WALL = 6;
+int TILE_IRR_WALL = 7;
 SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
 SDL_Rect gTileClips[TOTAL_TILE_SPRITES];
@@ -142,6 +143,7 @@ class LTexture
 
 LTexture gTileTexture;
 LTexture gDotTexture;
+LTexture BackgroundTexture;
 bool checkCollision(SDL_Rect a, SDL_Rect b)
 {
     int leftA, leftB;
@@ -186,7 +188,6 @@ class Tile{
 	Tile(int x, int y, int tileType){
 	mBox.x = x;
     mBox.y = y;
-
     mBox.w = TW;
     mBox.h = TH;
 
@@ -297,78 +298,159 @@ bool touchesWall(SDL_Rect box, Tile* tiles[]){
  return false;
 }
 
-class Characters{
+class Entities{
 	static const int DOT_WIDTH = 15;
 	static const int DOT_HEIGHT = 15;
-	
 	static const int DOT_VEL = 1;
-	public:
-	Characters(){
-		mBox.x = 0;
-		mBox.y = 0;
-		mBox.w = DOT_WIDTH;
-		mBox.h = DOT_HEIGHT;
-		mVelX = 0;
-		mVelY = 0;
-	}
 	
+	public:
+	Entities(){
+		DesiredX = Box.x = 300;
+		DesiredY = Box.y = 300;
+		Box.w = DOT_WIDTH;
+		Box.h = DOT_HEIGHT;
+		VelX = 0;
+		VelY = 0;
+		Cam.x = 0;
+		Cam.y = 0;
+		CVelX = CVelY = 0;
+		
+	}
+	void pathfinder(int x, int y)
+	{		
+		{
+			
+			cout << x - Box.x << "," << y - Box.y << endl;
+			 if(Box.x > x && Box.y > y)
+			{
+				VelY=-DOT_VEL;
+				VelX=-DOT_VEL; 
+			}
+			 if(Box.x < x && Box.y > y)
+			{
+				VelY=-DOT_VEL;
+				VelX=DOT_VEL; 
+			}
+			if(Box.x > x && Box.y < y)
+			{
+				VelY=DOT_VEL;
+				VelX=-DOT_VEL; 
+			}
+			if(Box.x < x && Box.y < y)
+			{
+				VelY=DOT_VEL;
+				VelX=DOT_VEL; 
+			}
+			
+			if(Box.x > x){
+					VelX=-DOT_VEL;
+				}
+			if(Box.x < x){
+					VelX=DOT_VEL;
+				}
+			if(Box.y > y){
+					VelY=-DOT_VEL;
+				}
+			if(Box.y < y){
+					VelY=DOT_VEL;
+				}
+		}
+	}
 	void handleEvent(SDL_Event& e){
 		if (e.type == SDL_KEYDOWN && e.key.repeat == 0){
 			switch(e.key.keysym.sym){
-				case SDLK_w: mVelY -= DOT_VEL; break;
-				case SDLK_s: mVelY += DOT_VEL; break;
-				case SDLK_a: mVelX -= DOT_VEL; break;
-				case SDLK_d: mVelX += DOT_VEL; break;
+				case SDLK_w: CVelY = -DOT_VEL; break;
+				case SDLK_s: CVelY = DOT_VEL; break;
+				case SDLK_a: CVelX = -DOT_VEL; break;
+				case SDLK_d: CVelX = DOT_VEL; break;
 			}
 		}
 		else if( e.type == SDL_KEYUP && e.key.repeat == 0 ){
             switch( e.key.keysym.sym ){
-				case SDLK_w: mVelY += DOT_VEL; break;
-				case SDLK_s: mVelY -= DOT_VEL; break;
-				case SDLK_a: mVelX += DOT_VEL; break;
-				case SDLK_d: mVelX -= DOT_VEL; break;
+				case SDLK_w: CVelY += DOT_VEL; break;
+				case SDLK_s: CVelY -= DOT_VEL; break;
+				case SDLK_a: CVelX += DOT_VEL; break;
+				case SDLK_d: CVelX -= DOT_VEL; break;
+			}
+		}
+		if (e.type == SDL_MOUSEBUTTONDOWN){
+			if(e.button.button == SDL_BUTTON_LEFT)
+			{
+				SDL_GetMouseState(&DesiredX,&DesiredY);
+				CamNX = DesiredX + Cam.x;
+				CamNY = DesiredY + Cam.y;
+				cout << CamNX << "," << CamNY << endl;
+				pathfinder(CamNX,CamNY);
+				cout << "5" << endl;
 			}
 		}
 	}
 	
 	void move(Tile *tiles[]){
-		mBox.x += mVelX;
-		
-	if( ( mBox.x < 0 ) || ( mBox.x + DOT_WIDTH > LW ) || touchesWall( mBox, tiles ) ){
-        mBox.x -= mVelX;
-	}
-		mBox.y += mVelY;
-	if( (mBox.y < 0) || (mBox.y + DOT_HEIGHT > LH) || touchesWall(mBox, tiles)){
-		mBox.y -= mVelY;	
-	}
+	if((abs((CamNX-Box.x)) >= 2) || (abs((CamNY-Box.y)) >= 2)){
+			Box.x += VelX;
+			pathfinder(CamNX,CamNY);
+			if( ( Box.x < 0 ) || ( Box.x + DOT_WIDTH > LW ) || touchesWall( Box, tiles ) ){
+				Box.x -= VelX;
+				cout << "6" << endl;
+				pathfinder(CamNX,CamNY);
+			}
+			Box.y += VelY;
+			pathfinder(CamNX,CamNY);	
+			if( (Box.y < 0) || (Box.y + DOT_HEIGHT > LH) || touchesWall(Box, tiles)){
+				Box.y -= VelY;
+				cout << "2" << endl;
+				pathfinder(CamNX,CamNY);
+			}
+		}
+			Cam.x += CVelX;
+			if( ( Cam.x < 0 ) || ( Cam.x > LW )){
+				Cam.x -= CVelX;
+				
+			}
+			Cam.y += CVelY;
+			if( (Cam.y < 0) || (Cam.y > LH)){
+				Cam.y -= CVelY;	
+			}
 }
 	void setCamera(SDL_Rect& camera){
-	camera.x = ( mBox.x + DOT_WIDTH / 2 ) - SW / 2;
-	camera.y = ( mBox.y + DOT_HEIGHT / 2 ) - SH / 2;
+	camera.x = (Cam.x);
+	camera.y = (Cam.y);
 	if( camera.x < 0 ){ 
 		camera.x = 0;
+		Cam.x = 0;
 	}
 	if( camera.y < 0 ){
 		camera.y = 0;
+		Cam.y = 0;
 	}
 	if( camera.x > LW - camera.w ){
 		camera.x = LW - camera.w;
+		Cam.x = LW - camera.w;
 	}
 	if( camera.y > LH - camera.h ){
 		camera.y = LH - camera.h;
+		Cam.y = LH - camera.h;
 	}
 }
 	void render(SDL_Rect& camera){
-		gDotTexture.render( mBox.x - camera.x, mBox.y - camera.y );
+		gDotTexture.render( Box.x - camera.x, Box.y - camera.y );
 	}
 	
 	private:
-	SDL_Rect mBox;
-	int mVelX, mVelY;
+	SDL_Rect Cam;
+	SDL_Rect Box;
+	int CVelX,CVelY;
+	int VelX, VelY;
+	int CamNX, CamNY;
+	int DesiredX, DesiredY;
 };
 
 void loadMedia(Tile* tiles[]){
 	if(!gDotTexture.LoadFromFile("dot.bmp")){
+		cout << "Failed to load dot texture! " << endl;
+	}
+	if(!BackgroundTexture.LoadFromFile("dot.bmp")){
 		cout << "Failed to load dot texture! " << endl;
 	}
 	if(!gTileTexture.LoadFromFile("tiles.png")){
@@ -377,6 +459,7 @@ void loadMedia(Tile* tiles[]){
 	if(!setTiles(tiles)){
 		cout << "Failed to load tile set!\n" << endl;
 	}
+	
 }
 
 class Game {
@@ -394,7 +477,7 @@ class Game {
 		
 		
 		
-		gWindow = SDL_CreateWindow( gameName, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_SHOWN );
+		gWindow = SDL_CreateWindow( gameName, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SW, SH, SDL_WINDOW_SHOWN );
 		if( gWindow == NULL )
 			{
 				cout << "Window could not be created! SDL Error: " << SDL_GetError() <<endl;
@@ -469,14 +552,14 @@ class Game {
 	virtual void show() = 0;
 	virtual void handleEvent(SDL_Event &e) = 0;
 };
-
+SDL_Rect camera = {0,0,SW,SH};
 class ourGame: public Game{
-	Characters CH1;
+	Entities CH1;
 	Tile* tileSet[TOTAL_TILES];
-	SDL_Rect camera = {0,0,SW,SH};
+	
 	
 	public:
-	void init(const char *gameName = "SDL Tutorial"){
+	void init(const char *gameName = "Space Raid"){
 		Game::init(gameName);
 		loadMedia(tileSet);
 		
