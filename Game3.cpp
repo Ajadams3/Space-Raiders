@@ -6,31 +6,35 @@
 #include <vector>
 #include <fstream>
 #include <cmath>
+#include <SDL_mixer.h>
 
 using namespace std;
 
 const int SW = 1000;
 const int SH = 800;
 
-const int LW = 4000;
-const int LH = 4000;
+
 
 const int TW = 20;
 const int TH = 20;
+const int LW = 500*TW;
+const int LH = 500*TH;
 const int TOTAL_TILES = (LW/TW) * (LH/TH);
 const int TOTAL_TILE_SPRITES = 8;
 
-int TILE_SPACE = 0;
-int TILE_IRR_SPACE = 1;
+int TILE_TRANS = 0;
+int TILE_GASES = 1;
 int TILE_METAL_FLOOR = 2;
 int TILE_IRR_METAL_FLOOR = 3;
 int TILE_ASTEROID = 4;
-int TILE_IRR_ASTEROID = 5;
+int _METAL_ORE = 5;
 int TILE_WALL = 6;
 int TILE_IRR_WALL = 7;
 SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
 SDL_Rect gTileClips[TOTAL_TILE_SPRITES];
+Mix_Music *music;
+Mix_Chunk AmbientSpace;
 
 
 class LTexture
@@ -212,7 +216,7 @@ class Tile{
 		bool tilesLoaded = true;
 		int x = 0; int y = 0;
 		
-		ifstream map("tiles.map");
+		ifstream map("tile.map");
 			for(int i =0; i < TOTAL_TILES; ++i)
 			{
 				int tileType = -1;
@@ -237,42 +241,42 @@ class Tile{
 			}
 			if(tilesLoaded)
 			{
-				gTileClips[ TILE_SPACE ].x = 0;
-				gTileClips[ TILE_SPACE ].y = 0;
-				gTileClips[ TILE_SPACE ].w = TW;
-				gTileClips[ TILE_SPACE].h = TH;
+				gTileClips[ TILE_TRANS ].x = 280;
+				gTileClips[ TILE_TRANS ].y = 0;
+				gTileClips[ TILE_TRANS ].w = TW;
+				gTileClips[ TILE_TRANS].h = TH;
 				
-				gTileClips[ TILE_IRR_SPACE].x = 20;
-				gTileClips[ TILE_IRR_SPACE].y = 0;
-				gTileClips[ TILE_IRR_SPACE].w = TW;
-				gTileClips[ TILE_IRR_SPACE].h = TH;
+				gTileClips[ TILE_GASES].x = 160;
+				gTileClips[ TILE_GASES].y = 0;
+				gTileClips[ TILE_GASES].w = TW;
+				gTileClips[ TILE_GASES].h = TH;
 				
-				gTileClips[ TILE_METAL_FLOOR].x = 40;
+				gTileClips[ TILE_METAL_FLOOR].x = 120;
 				gTileClips[ TILE_METAL_FLOOR].y = 0;
 				gTileClips[ TILE_METAL_FLOOR].w = TW;
 				gTileClips[ TILE_METAL_FLOOR].h = TH;
 				
-				gTileClips[ TILE_IRR_METAL_FLOOR ].x = 60;
+				gTileClips[ TILE_IRR_METAL_FLOOR ].x = 200;
 				gTileClips[ TILE_IRR_METAL_FLOOR ].y = 0;
 				gTileClips[ TILE_IRR_METAL_FLOOR ].w = TW;
 				gTileClips[ TILE_IRR_METAL_FLOOR].h = TH;
 				
-				gTileClips[ TILE_ASTEROID ].x = 80;
+				gTileClips[ TILE_ASTEROID ].x = 0;
 				gTileClips[ TILE_ASTEROID ].y = 0;
 				gTileClips[ TILE_ASTEROID ].w = TW;
 				gTileClips[ TILE_ASTEROID].h = TH;
 				
-				gTileClips[ TILE_IRR_ASTEROID ].x = 100;
-				gTileClips[ TILE_IRR_ASTEROID ].y = 0;
-				gTileClips[ TILE_IRR_ASTEROID ].w = TW;
-				gTileClips[ TILE_IRR_ASTEROID].h = TH;
+				gTileClips[ _METAL_ORE ].x = 40;
+				gTileClips[ _METAL_ORE ].y = 0;
+				gTileClips[ _METAL_ORE ].w = TW;
+				gTileClips[ _METAL_ORE].h = TH;
 				
-				gTileClips[ TILE_WALL ].x = 120;
+				gTileClips[ TILE_WALL ].x = 80;
 				gTileClips[ TILE_WALL ].y = 0;
 				gTileClips[ TILE_WALL ].w = TW;
 				gTileClips[ TILE_WALL].h = TH;
 				
-				gTileClips[ TILE_IRR_WALL ].x = 140;
+				gTileClips[ TILE_IRR_WALL ].x = 240;
 				gTileClips[ TILE_IRR_WALL ].y = 0;
 				gTileClips[ TILE_IRR_WALL ].w = TW;
 				gTileClips[ TILE_IRR_WALL].h = TH;
@@ -290,7 +294,7 @@ bool touchesWall(SDL_Rect box, Tile* tiles[]){
 	 //Go through the tiles
     for( int i = 0; i < TOTAL_TILES; ++i )
     {
-		if( ( tiles[ i ]->getType() >= TILE_ASTEROID ) && ( tiles[ i ]->getType() <= TILE_WALL ) )
+		if( ( tiles[ i ]->getType() >= TILE_IRR_METAL_FLOOR ) && ( tiles[ i ]->getType() <= TILE_WALL ) )
             if( checkCollision( box, tiles[ i ]->getBox()))
                 return true;
     }
@@ -319,8 +323,7 @@ class Entities{
 	void pathfinder(int x, int y)
 	{		
 		{
-			
-			cout << x - Box.x << "," << y - Box.y << endl;
+			//cout << x - Box.x << "," << y - Box.y << endl;
 			 if(Box.x > x && Box.y > y)
 			{
 				VelY=-DOT_VEL;
@@ -341,7 +344,6 @@ class Entities{
 				VelY=DOT_VEL;
 				VelX=DOT_VEL; 
 			}
-			
 			if(Box.x > x){
 					VelX=-DOT_VEL;
 				}
@@ -364,6 +366,9 @@ class Entities{
 				case SDLK_a: CVelX = -DOT_VEL; break;
 				case SDLK_d: CVelX = DOT_VEL; break;
 			}
+			if (e.key.keysym.sym==SDLK_1) {
+				cout << "1" << endl;
+			  }
 		}
 		else if( e.type == SDL_KEYUP && e.key.repeat == 0 ){
             switch( e.key.keysym.sym ){
@@ -391,14 +396,14 @@ class Entities{
 			Box.x += VelX;
 			pathfinder(CamNX,CamNY);
 			if( ( Box.x < 0 ) || ( Box.x + DOT_WIDTH > LW ) || touchesWall( Box, tiles ) ){
-				Box.x -= VelX;
+				Box.x = 0;
 				cout << "6" << endl;
 				pathfinder(CamNX,CamNY);
 			}
 			Box.y += VelY;
 			pathfinder(CamNX,CamNY);	
 			if( (Box.y < 0) || (Box.y + DOT_HEIGHT > LH) || touchesWall(Box, tiles)){
-				Box.y -= VelY;
+				Box.y = 0;
 				cout << "2" << endl;
 				pathfinder(CamNX,CamNY);
 			}
@@ -467,7 +472,8 @@ class Game {
 	
 	public:
 	virtual void init(const char *gameName){
-		if(SDL_Init(SDL_INIT_VIDEO) < 0) cout << "SDL_Initialization error: " << SDL_GetError() << endl;
+		if((SDL_Init(SDL_INIT_VIDEO) | SDL_Init(SDL_INIT_AUDIO)) < 0) 
+		cout << "SDL_Initialization error: " << SDL_GetError() << endl;
 		else
 		{
 		if( !SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1" ) )
@@ -490,12 +496,16 @@ class Game {
 					cout <<  "Renderer could not be created! SDL Error: " << SDL_GetError() << endl;
 				}
 				else
-				{
+				{					
 					SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
 					int imgFlags = IMG_INIT_PNG;
 					if( !( IMG_Init( imgFlags ) & imgFlags ) )
 					{
 						cout << "SDL_image could not initialize! SDL_image Error: " << IMG_GetError()<<endl;
+					}
+					if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 4096 ) == -1 ) 
+					{ 
+						cout << "SDL_mixer could not initialize! " << endl << "SDL_mixer Error: " << Mix_GetError() << endl; 
 					}
 				}
 			}
@@ -586,9 +596,21 @@ class ourGame: public Game{
 		Game::close(tileSet);
 	}
 };
+void MapBuilder(int Height, int Width){
+	ofstream fout;
+	fout.open("tile.map");
+	for (int i = 0; i <= Width/20; i++){
+		for(int j = 0; j <= Height/20; j++){
+			fout << "02 ";
+		}
+		fout << endl;
+	}
+}
+
 
 int main( int argc, char *argv[] ){
 	ourGame g;
+	MapBuilder(LH,LW);
 	g.init();
 	g.run();
 	g.close();
